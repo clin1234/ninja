@@ -16,6 +16,8 @@
 
 #include "test.h"
 
+using namespace std;
+
 namespace {
 
 bool CanonicalizePath(string* path, string* err) {
@@ -420,6 +422,10 @@ TEST(ElideMiddle, NothingToElide) {
   string input = "Nothing to elide in this short string.";
   EXPECT_EQ(input, ElideMiddle(input, 80));
   EXPECT_EQ(input, ElideMiddle(input, 38));
+  EXPECT_EQ("", ElideMiddle(input, 0));
+  EXPECT_EQ(".", ElideMiddle(input, 1));
+  EXPECT_EQ("..", ElideMiddle(input, 2));
+  EXPECT_EQ("...", ElideMiddle(input, 3));
 }
 
 TEST(ElideMiddle, ElideInTheMiddle) {

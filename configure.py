@@ -60,6 +60,8 @@ class Platform(object):
             self._platform = 'netbsd'
         elif self._platform.startswith('aix'):
             self._platform = 'aix'
+        elif self._platform.startswith('os400'):
+            self._platform = 'os400'
         elif self._platform.startswith('dragonfly'):
             self._platform = 'dragonfly'
 
@@ -96,6 +98,9 @@ class Platform(object):
 
     def is_aix(self):
         return self._platform == 'aix'
+
+    def is_os400_pase(self):
+        return self._platform == 'os400' or os.uname().sysname.startswith('OS400')
 
     def uses_usr_local(self):
         return self._platform in ('freebsd', 'openbsd', 'bitrig', 'dragonfly', 'netbsd')
@@ -264,7 +269,7 @@ if configure_env:
     n.variable('configure_env', config_str + '$ ')
 n.newline()
 
-CXX = configure_env.get('CXX', 'g++')
+CXX = configure_env.get('CXX', 'c++')
 objext = '.o'
 if platform.is_msvc():
     CXX = 'cl'
@@ -351,7 +356,7 @@ else:
     except:
         pass
     if platform.is_mingw():
-        cflags += ['-D_WIN32_WINNT=0x0501']
+        cflags += ['-D_WIN32_WINNT=0x0601', '-D__USE_MINGW_ANSI_STDIO=1']
     ldflags = ['-L$builddir']
     if platform.uses_usr_local():
         cflags.append('-I/usr/local/include')
@@ -432,7 +437,7 @@ if host.is_msvc():
            description='LIB $out')
 elif host.is_mingw():
     n.rule('ar',
-           command='cmd /c $ar cqs $out.tmp $in && move /Y $out.tmp $out',
+           command='$ar crs $out $in',
            description='AR $out')
 else:
     n.rule('ar',
@@ -536,7 +541,7 @@ if platform.is_msvc():
 else:
     libs.append('-lninja')
 
-if platform.is_aix():
+if platform.is_aix() and not platform.is_os400_pase():
     libs.append('-lperfstat')
 
 all_targets = []
@@ -591,6 +596,11 @@ all_targets += ninja_test
 
 n.comment('Ancillary executables.')
 
+if platform.is_aix() and '-maix64' not in ldflags:
+    # Both hash_collision_bench and manifest_parser_perftest require more
+    # memory than will fit in the standard 32-bit AIX shared stack/heap (256M)
+    libs.append('-Wl,-bmaxdata:0x80000000')
+
 for name in ['build_log_perftest',
              'canon_perftest',
              'depfile_parser_perftest',
@@ -644,7 +654,7 @@ n.rule('doxygen_mainpage',
        command='$doxygen_mainpage_generator $in > $out',
        description='DOXYGEN_MAINPAGE $out')
 mainpage = n.build(built('doxygen_mainpage'), 'doxygen_mainpage',
-                   ['README', 'COPYING'],
+                   ['README.md', 'COPYING'],
                    implicit=['$doxygen_mainpage_generator'])
 n.build('doxygen', 'doxygen', doc('doxygen.config'),
         implicit=mainpage)
