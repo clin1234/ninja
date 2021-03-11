@@ -78,22 +78,43 @@ void Fatal(const char* msg, ...) {
 #endif
 }
 
+void Warning(const char* msg, va_list ap) {
+  fprintf(stderr, "ninja: warning: ");
+  vfprintf(stderr, msg, ap);
+  fprintf(stderr, "\n");
+}
+
 void Warning(const char* msg, ...) {
   va_list ap;
-  fprintf(stderr, "ninja: warning: ");
   va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
+  Warning(msg, ap);
   va_end(ap);
+}
+
+void Error(const char* msg, va_list ap) {
+  fprintf(stderr, "ninja: error: ");
+  vfprintf(stderr, msg, ap);
   fprintf(stderr, "\n");
 }
 
 void Error(const char* msg, ...) {
   va_list ap;
-  fprintf(stderr, "ninja: error: ");
   va_start(ap, msg);
-  vfprintf(stderr, msg, ap);
+  Error(msg, ap);
   va_end(ap);
+}
+
+void Info(const char* msg, va_list ap) {
+  fprintf(stderr, "ninja: ");
+  vfprintf(stderr, msg, ap);
   fprintf(stderr, "\n");
+}
+
+void Info(const char* msg, ...) {
+  va_list ap;
+  va_start(ap, msg);
+  Info(msg, ap);
+  va_end(ap);
 }
 
 bool CanonicalizePath(string* path, uint64_t* slash_bits, string* err) {
@@ -624,6 +645,10 @@ double GetLoadAverage() {
   if (sysinfo(&si) != 0)
     return -0.0f;
   return 1.0 / (1 << SI_LOAD_SHIFT) * si.loads[0];
+}
+#elif defined(__HAIKU__)
+double GetLoadAverage() {
+    return -0.0f;
 }
 #else
 double GetLoadAverage() {
